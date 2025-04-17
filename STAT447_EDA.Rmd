@@ -1,0 +1,118 @@
+---
+title: "STAT447 EDA"
+output: pdf_document
+date: "2025-04-15"
+---
+
+```{r setup, include=FALSE}
+# Load libraries
+require("reshape2")
+require("tidyverse")
+require("dplyr")
+require("psych")
+```
+
+## Load dataset
+```{r}
+df <- read.csv("~/Documents/UBC/year_4/STAT447/project/cleaned_global_water_consumption.csv")
+```
+
+
+## Check for null values
+```{r}
+colSums(is.na(df))
+```
+
+No null values found.
+
+## Create new water scarcity column with new level: Severe
+```{r}
+# Create small epsilon to avoid division by zero
+epsilon <- 1e-6
+
+# 1) Transform each relevant column in the direction of "higher = more scarcity"
+# Note: ensure the column names match exactly those in your dataset
+inv_per_capita  <- 1 / (df$Per.Capita.Water.Use..Liters.per.Day. + epsilon)
+inv_rainfall    <- 1 / (df$Rainfall.Impact..Annual.Precipitation.in.mm. + epsilon)
+depletion_rate  <- df$Groundwater.Depletion.Rate....
+total_consum    <- df$Total.Water.Consumption..Billion.Cubic.Meters.
+agri_use        <- df$Agricultural.Water.Use....  # e.g. 48% stored as 48
+
+# 2) Scale (standardize) these variables
+z_inv_per_capita <- scale(inv_per_capita)
+z_inv_rainfall   <- scale(inv_rainfall)
+z_depletion      <- scale(depletion_rate)
+z_total_consum   <- scale(total_consum)
+z_agri_use       <- scale(agri_use)
+
+# 3) Combine them into a single water scarcity index
+df$water_scarcity_index <- rowMeans(
+  cbind(
+    z_inv_per_capita,
+    z_inv_rainfall,
+    z_depletion,
+    z_total_consum,
+    z_agri_use
+  ), 
+  na.rm = TRUE
+)
+
+# 4) Categorize the index (cut points can be tweaked)
+df$Water_Scarcity_Level <- cut(
+  df$water_scarcity_index,
+  breaks = c(-Inf, -0.5, 0.5, 1.5, Inf),
+  labels = c("Low", "Moderate", "High", "Severe"),
+  right = FALSE
+)
+```
+
+## Rename columns of dataframe and remove old scarcity level variable
+```{r}
+colnames(df) <- c("country", "year", "total_consumption", "per_capita_use", 
+                  "agricultural", "industrial", "household", "rainfall_annual",
+                  "groundwater_dep", "scar_level_old", "scarcity_index",
+                  "scarcity_level")
+df <- df[-c(10)]
+```
+
+## Correlation heatmap of numerical variables
+```{r}
+cor_mat <- cor(select(df, -c("scarcity_level", "country", "year")))
+melted_mat <- melt(cor_mat)
+ggplot(melted_mat, aes(Var1, Var2, fill = value)) +
+  geom_tile()
+```
+
+Note the variables highly correlated with scarcity index: groundwater depletion rate, agricultural water use and total water consumption.
+
+## Distribution of highly correlated variables
+```{r}
+par(mfrow = c(2, 2))
+
+hist(df$groundwater_dep, 
+     main = "Groundwater Depletion Rate Distribution", 
+     xlab = "Groundwater Depletion Rate (%)")
+hist(df$agricultural, 
+     main = "Agricultural Use Distribution", 
+     xlab = "Agricultural Water Use (%)")
+hist(df$total_consumption, 
+     main = "Total Use Distribution", 
+     xlab = "Total Water Use (Million m^3)")
+```
+
+
+## Boxplots of highly correlated variables at different scarcity levels
+```{r}
+par(mfrow = c(1, 3))
+
+boxplot(df$groundwater_dep ~ df$scarcity_level,
+        xlab = "Water Scarcity Level", ylab = "Groundwater Depletion Rate (%)")
+boxplot(df$agricultural ~ df$scarcity_level,
+        xlab = "Water Scarcity Level", ylab = "Agricultural Water Use (%)")
+boxplot(df$total_consumption ~ df$scarcity_level,
+        xlab = "Water Scarcity Level", ylab = "Total Water Consumption (Billion m^3)")
+```
+
+
+
+
