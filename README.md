@@ -25,10 +25,3 @@ This project performs a Bayesian survival analysis to model the time until count
 3.  **EDA:** Run `Rscript eda.R` to generate PNG plots for review.
 4.  **Stan Model:** Run `Rscript stan_model.R` to compile and run the sampler (may take several minutes), creating `stan_weibull_fit.rds`.
 5.  **Analysis:** Load `stan_weibull_fit.rds` in R for posterior analysis, diagnostics checks, and generating report results.
-
-## Project Notes & Challenges
-
-*   **Initial Approach:** The project initially planned to compare Bayesian and Frequentist (Cox PH) survival models. However, the Cox model encountered numerical instability (separation issues) when including region as a fixed effect due to the small number of events per region. While stratification resolved this, we decided to focus solely on the Bayesian hierarchical model for the final report to allow for a more in-depth exploration of that approach.
-*   **Scarcity Definition:** We are using the original `Water Scarcity Level` categories provided in the dataset, defining the event as the first time a country reaches "High". Exploratory work considered calculating a custom index, but we proceeded with the original definition for clarity and consistency with the existing survival analysis framework.
-*   **Stan Diagnostics:** The Stan model initially showed some divergences. Increasing the `adapt_delta` setting to 0.95 significantly reduced these, resulting in a more reliable posterior sample. The final fit still had a very small number of divergences (<0.1%), which should be noted when interpreting results.
-*   **Covariate Scaling:** Covariates were scaled (mean 0, sd 1) before being passed to Stan to improve sampler efficiency.
