@@ -12,13 +12,15 @@ check <- cox.zph(cox_model)
 print("Proportional Hazards assumption check:")
 print(check)
 
+# Graph Schoenfeld plot
+ggcoxzph(check)
+
 # Inspect fitted model
 print("Cox PH model summary:")
 print(summary(cox_model))
 
 # Graph survival plot
 ggsurvplot(survfit(cox_model), data = df, xlim = c(2000, 2024))
-
 
 
 
