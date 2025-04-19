@@ -52,7 +52,7 @@ model {
   beta ~ normal(0, 2);           // Regularizing priors for coefficients
   
   mu_lambda ~ normal(0, 5);        // Prior for mean log baseline scale
-  sigma_lambda ~ cauchy(0, 2.5);     // Prior for std dev of log baseline scale (half-Cauchy recommended)
+  sigma_lambda ~ normal(0, 1);     // Prior for std dev of log baseline scale (Half-Normal recommended to avoid funnel)
   eta_lambda ~ std_normal();       // Prior for standardized region deviations
   
   // --- Likelihood ---
@@ -88,8 +88,39 @@ model {
   }
 }
 
-// Generated Quantities Block (Optional)
+// Generated Quantities Block
 generated quantities {
   vector[N_regions] lambda = exp(log_lambda); // Weibull scale parameter per region
-  // Can calculate hazard ratios, posterior predictions etc.
+  
+  // --- Posterior Predictive Checks ---
+  // Simulate event indicator for each interval based on model parameters
+  array[N_intervals] int<lower=0, upper=1> event_rep;
+  {
+    // Recalculate interval-specific log_lambda and log_hazard_ratio (as in transformed parameters)
+    // These are based on the *current* posterior draw of parameters
+    vector[N_regions] current_log_lambda = mu_lambda + sigma_lambda * eta_lambda;
+    vector[N_intervals] current_interval_log_lambda; 
+    vector[N_intervals] current_log_hazard_ratio = X * beta;
+    vector[N_intervals] current_log_hazard_contribution;
+    
+    for (i in 1:N_intervals) {
+      current_interval_log_lambda[i] = current_log_lambda[region_id[country_id[i]]];
+    }
+    current_log_hazard_contribution = current_interval_log_lambda + current_log_hazard_ratio;
+
+    // Loop through intervals and simulate event status
+    for (i in 1:N_intervals) {
+      // Calculate integrated hazard for the interval H(t_start, t_stop)
+      real H_interval = exp(current_log_hazard_contribution[i]) * 
+                         (pow(t_stop[i], alpha) - pow(t_start[i], alpha));
+                         
+      // Calculate probability of event *within* this interval, given survival up to t_start
+      // P(event in [t_start, t_stop] | T >= t_start) = 1 - exp(-H_interval)
+      // Handle potential numerical issues where H_interval might be tiny negative (due to precision)
+      real prob_event_interval = 1.0 - exp(-fmax(0.0, H_interval)); 
+      
+      // Simulate the event indicator for this interval
+      event_rep[i] = bernoulli_rng(prob_event_interval);
+    }
+  }
 } 
