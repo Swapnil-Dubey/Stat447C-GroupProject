@@ -5,6 +5,21 @@ library(survminer) # For enhanced survival plots (ggsurvplot)
 library(patchwork) # For combining plots
 library(ggcorrplot) # For visualizing correlation matrix
 
+# Set theme defaults for standard plots (white background, black text)
+theme_set(theme_minimal())
+theme_update(
+  text = element_text(colour = "black"),
+  axis.text = element_text(colour = "black"),
+  axis.title = element_text(colour = "black"),
+  plot.title = element_text(colour = "black"),
+  plot.subtitle = element_text(colour = "black"),
+  legend.text = element_text(colour = "black"),
+  legend.title = element_text(colour = "black"),
+  strip.text = element_text(colour = "black"),
+  plot.background = element_rect(fill = "white", colour = NA),
+  panel.background = element_rect(fill = "white", colour = NA)
+)
+
 # --- Load Processed Data (for KM plots) ---
 processed_file_path <- "data/processed_water_survival_data.rds"
 if (!file.exists(processed_file_path)) {
@@ -44,18 +59,15 @@ original_water_data <- original_water_data %>%
 print("Generating histograms...")
 hist_agri <- ggplot(original_water_data, aes(x = agri_use_pct)) +
   geom_histogram(bins = 15, fill = "skyblue", color = "black") +
-  ggtitle("Distribution of Agricultural Water Use (%)") +
-  theme_minimal()
+  ggtitle("Distribution of Agricultural Water Use (%)")
 
 hist_rain <- ggplot(original_water_data, aes(x = rainfall_mm)) +
   geom_histogram(bins = 15, fill = "skyblue", color = "black") +
-  ggtitle("Distribution of Annual Rainfall (mm)") +
-  theme_minimal()
+  ggtitle("Distribution of Annual Rainfall (mm)")
 
 hist_gw <- ggplot(original_water_data, aes(x = groundwater_depletion_pct)) +
   geom_histogram(bins = 15, fill = "skyblue", color = "black") +
-  ggtitle("Distribution of Groundwater Depletion Rate (%)") +
-  theme_minimal()
+  ggtitle("Distribution of Groundwater Depletion Rate (%)")
 
 # Combine and save histograms
 plot_histograms <- hist_agri + hist_rain + hist_gw + plot_layout(ncol = 1)
@@ -67,19 +79,16 @@ print("Generating boxplots vs scarcity level...")
 box_agri <- ggplot(original_water_data, aes(x = scarcity_level, y = agri_use_pct, fill = scarcity_level)) +
   geom_boxplot() +
   ggtitle("Agricultural Use (%) vs. Scarcity Level") +
-  theme_minimal() +
   theme(legend.position = "none")
 
 box_rain <- ggplot(original_water_data, aes(x = scarcity_level, y = rainfall_mm, fill = scarcity_level)) +
   geom_boxplot() +
   ggtitle("Rainfall (mm) vs. Scarcity Level") +
-  theme_minimal() +
   theme(legend.position = "none")
 
 box_gw <- ggplot(original_water_data, aes(x = scarcity_level, y = groundwater_depletion_pct, fill = scarcity_level)) +
   geom_boxplot() +
   ggtitle("Groundwater Depletion (%) vs. Scarcity Level") +
-  theme_minimal() +
   theme(legend.position = "none")
 
 # Combine and save boxplots
@@ -108,18 +117,34 @@ cor_matrix <- cor(potential_predictors, use = "complete.obs")
 print("--- Correlation Matrix --- ")
 print(round(cor_matrix, 2)) # Print rounded matrix
 
-# Visualize the correlation matrix
+# Create a custom theme for ggcorrplot inheriting global defaults but ensuring white bg
+theme_corrplot <- theme_minimal() + # Start with minimal theme elements
+  theme(
+    text = element_text(colour = "black"),
+    axis.text = element_text(colour = "black"),
+    axis.title = element_text(colour = "black"),
+    plot.title = element_text(colour = "black"),
+    plot.subtitle = element_text(colour = "black"),
+    legend.text = element_text(colour = "black"),
+    legend.title = element_text(colour = "black"),
+    strip.text = element_text(colour = "black"),
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.background = element_rect(fill = "white", colour = NA),
+    panel.grid.major = element_line(colour = "grey90"), # Ensure grid lines are visible
+    panel.grid.minor = element_line(colour = "grey95")
+  )
+
+# Visualize the correlation matrix using the custom theme
 plot_corr <- ggcorrplot(cor_matrix,
-  method = "square", # Use squares for boxes
-  type = "lower", # Show lower triangle
-  lab = TRUE, # Show correlation coefficients
+  method = "square",
+  type = "lower",
+  lab = TRUE,
   lab_size = 3,
   title = "Correlation Matrix of Potential Predictors",
-  ggtheme = theme_minimal()
-) +
-  theme(legend.position = "right")
+  ggtheme = theme_corrplot # Explicitly apply the custom theme
+)
 
-ggsave("output/eda/correlation_matrix_predictors.png", plot_corr, width = 8, height = 7, dpi = 300)
+ggsave("output/eda/correlation_matrix_predictors.png", plot_corr, width = 8, height = 7, dpi = 300, bg = "white") # Add bg="white" for certainty
 print("Correlation matrix plot saved to output/eda/correlation_matrix_predictors.png")
 
 
@@ -135,7 +160,7 @@ surv_obj_overall <- Surv(time = km_data$overall_time, event = km_data$overall_ev
 print("Generating overall Kaplan-Meier plot...")
 km_fit_overall <- survfit(surv_obj_overall ~ 1, data = km_data)
 
-# Plot using ggsurvplot
+# Plot using ggsurvplot - use theme_minimal() within ggtheme for base
 plot_overall_km <- ggsurvplot(
   km_fit_overall,
   data = km_data,
@@ -146,12 +171,22 @@ plot_overall_km <- ggsurvplot(
   xlab = "Time (Years since observation start)",
   ylab = "Survival Probability (Not Reaching High Scarcity)",
   legend = "none",
-  ggtheme = theme_minimal()
+  ggtheme = theme_minimal() # Apply base theme here
 )
+
+# Apply the global theme update specifically to the plot and table for text colors
+plot_overall_km$plot <- plot_overall_km$plot + theme_update()
+plot_overall_km$table <- plot_overall_km$table + theme_update()
 
 # Save the plot (robust method)
 # ggsave expects a ggplot object, ggsurvplot returns a list; save the plot component
-ggsave("output/eda/km_plot_overall.png", plot = plot_overall_km$plot, width = 8, height = 6, dpi = 300)
+# We need to save the combined plot potentially, not just plot_overall_km$plot
+# Let's use the original approach of saving the whole object via png()
+
+# Save the plot using png() to capture the full ggsurvplot object
+png("output/eda/km_plot_overall.png", width = 8, height = 6, units = "in", res = 300, bg = "white")
+print(plot_overall_km)
+dev.off()
 print("Overall KM plot saved to output/eda/km_plot_overall.png")
 
 
@@ -174,12 +209,17 @@ plot_region_km <- ggsurvplot(
   ylab = "Survival Probability",
   legend.title = "Region",
   legend.labs = levels(km_data$region),
-  ggtheme = theme_minimal()
+  ggtheme = theme_minimal() # Apply base theme here
 )
 
-# Save the plot (robust method)
-# ggsave expects a ggplot object, ggsurvplot returns a list; save the plot component
-ggsave("output/eda/km_plot_by_region.png", plot = plot_region_km$plot, width = 10, height = 8, dpi = 300)
+# Apply the global theme update specifically to the plot and table for text colors
+plot_region_km$plot <- plot_region_km$plot + theme_update()
+plot_region_km$table <- plot_region_km$table + theme_update()
+
+# Save the plot using png() to capture the full ggsurvplot object
+png("output/eda/km_plot_by_region.png", width = 10, height = 8, units = "in", res = 300, bg = "white")
+print(plot_region_km)
+dev.off()
 print("Regional KM plot saved to output/eda/km_plot_by_region.png")
 
 # --- Optional: Examine Covariate Distributions ---

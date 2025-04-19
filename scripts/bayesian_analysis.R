@@ -9,16 +9,19 @@ library(patchwork) # To combine plots
 # Set bayesplot theme
 color_scheme_set("brightblue")
 theme_set(theme_minimal())
-# Update theme elements for better visibility on dark backgrounds
+# Update theme elements for standard plots (white background, black text)
 theme_update(
-    text = element_text(colour = "white"),
-    axis.text = element_text(colour = "white"), # Ensure axis text is white
-    axis.title = element_text(colour = "white"), # Ensure axis titles are white
-    plot.title = element_text(colour = "white"), # Ensure plot titles are white
-    plot.subtitle = element_text(colour = "white"), # Ensure subtitles are white
-    legend.text = element_text(colour = "white"), # Ensure legend text is white
-    legend.title = element_text(colour = "white"), # Explicitly add legend title
-    strip.text = element_text(colour = "white") # Ensure facet labels are white
+    text = element_text(colour = "black"), # Change text color to black
+    axis.text = element_text(colour = "black"),
+    axis.title = element_text(colour = "black"),
+    plot.title = element_text(colour = "black"),
+    plot.subtitle = element_text(colour = "black"),
+    legend.text = element_text(colour = "black"),
+    legend.title = element_text(colour = "black"),
+    strip.text = element_text(colour = "black"),
+    # Keep plot background white
+    plot.background = element_rect(fill = "white", colour = NA),
+    panel.background = element_rect(fill = "white", colour = NA)
 )
 
 # --- 2. Load Stan Fit Object ---
