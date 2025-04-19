@@ -1,0 +1,8 @@
+# R Plots pdf
+Rplots.pdf
+
+# Large data/model output files
+*.rds
+
+# Stan compilation artifacts
+weibull_hierarchical_tvc 
