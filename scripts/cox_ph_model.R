@@ -50,6 +50,11 @@ p_schoenfeld_themed_list <- lapply(p_schoenfeld_list, function(p) p + theme_repo
 print("Cox PH model summary:")
 print(summary(cox_model))
 
+# Extract hazard ratio confidence interval
+ci <- confint(cox_model)
+print("Hazard Ratio 95% confidence interval:")
+print(exp(ci))
+
 # Graph survival plot based on the fitted model
 surv_fit_obj <- survfit(cox_model, data = cox_data)
 p_cox_surv <- ggsurvplot(surv_fit_obj,
